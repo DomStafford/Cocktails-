@@ -11,14 +11,14 @@ def add_cocktail(cocktail: str, ratios: dict) -> pd.DataFrame:
     return df
 
 
-def remove_last_cocktail():
+def remove_last_cocktail() -> pd.DataFrame:
     df = pd.read_pickle('CocktailsDataFrame.pkl')
     df = df.iloc[:-1]
     df.to_pickle('CocktailsDataFrame.pkl')
     return df
 
 
-def add_spirit(brand: str, typ: str, strength: float, price: float):
+def add_spirit(brand: str, typ: str, strength: float, price: float) -> pd.DataFrame:
     df = pd.read_pickle('AlcoholDataFrame.pkl')
     row = [{'Brand': brand, 'Type': typ, 'Strength (abv %)': strength, 'Price (/litre)': price}]
     temp_df = pd.DataFrame(row).set_index('Brand')
@@ -27,7 +27,7 @@ def add_spirit(brand: str, typ: str, strength: float, price: float):
     return appended_df
 
 
-def remove_last_spirit():
+def remove_last_spirit() -> pd.DataFrame:
     df = pd.read_pickle('AlcoholDataFrame.pkl')
     df = df.iloc[:-1]
     df.to_pickle('AlcoholDataFrame.pkl')

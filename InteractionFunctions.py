@@ -3,6 +3,7 @@ from typing import List
 from CocktailDrinkCreator import *
 
 BRANDLESS_DRINKS = ['Lemon juice', 'Lime juice']
+NONALCOHOLIC_DRINKS = ['Lemon juice', 'Lime juice', 'Tonic']
 
 def interact():
     service = _service_selection()
@@ -37,8 +38,16 @@ def interact():
 
     elif service == '2':
         _add_new_spirit()
-    else:
+    elif service == '3':
         _create_new_cocktail()
+    elif service == '4':
+        print('The available cocktails are listed below.')
+        print(*_get_available_cocktails(), sep='\n')
+        print('If the one you want is not listed, then return to the start and add it.')
+    else:
+        print('The available spirits/liqueurs are given below.')
+        print(*_get_available_spirits(), sep = '\n')
+        print('If the one you want is not listed, then return to the start and add it.')
     another_service = _another_service()
     if another_service == 'Y':
         interact()
@@ -68,7 +77,7 @@ def _get_drink_attributes(cocktail: str, quantity_drunk: int, brands_used: dict)
         print('The error message was: ', e)
 
 
-def _request_user_input(request_message, valid_responses, error_message):
+def _request_user_input(request_message: str, valid_responses: List[str], error_message: str) -> str:
     response = input(request_message)
     if response not in valid_responses:
         print(error_message)
@@ -85,9 +94,11 @@ def _service_selection() -> str:
     return _request_user_input('Would you like to: \n'
                                '1. Get steam info for a drink \n'
                                '2. Add a new drink (e.g. spirit/liquer)\n'
-                               '3. Add a new cocktail',
-                               ['1', '2', '3'],
-                               'Please enter 1, 2 or 3.')
+                               '3. Add a new cocktail \n'
+                               '4. See all available cocktails \n'
+                               '5. See all available spirits',
+                               ['1', '2', '3', '4', '5'],
+                               'Please enter 1-5.')
 
 
 def _cocktails_or_neat() -> str:
@@ -135,16 +146,24 @@ def _brand_selection(brands: dict) -> dict:
                             'Make sure you type it correctly - or just copy and paste it.')
     return choices
 
+def _print_message_from_enumeration(enumerated_list: list, print_message = '', post_message = None):
+    for el in enumerated_list:
+        print_message += str(el[0]) + '. ' + el[1] + ' \n'
+    if post_message is None:
+        print(print_message[:-2])
+    else:
+        print_message += post_message
+        print(print_message)
 
 def _create_new_cocktail():
     spirits_df = pd.read_pickle('AlcoholDataFrame.pkl')
     list_of_spirits_enumerated =  list(enumerate(spirits_df['Type'].unique()))
-    print_message = 'Let\'s add the cocktail now. Choose from the availalbe spirits one at a time.' \
-                    ' \n The available spirits are: \n'
-    for el in list_of_spirits_enumerated:
-        print_message += str(el[0]) + '. ' + el[1] + ' \n'
-    print(print_message, 'Keep on adding until you are done.\n',
-          'Also, at present, I cba let you add new spirits here too, exit to the beginning if the spirit isn\'t here.')
+    _print_message_from_enumeration(list_of_spirits_enumerated,
+                                    'Let\'s add the cocktail now. Choose from the availalbe spirits one at a time. \n '
+                                    'The available spirits are: \n',
+                                    'Keep on adding until you are done.\n Also, at present, I cba let you add new '
+                                    'spirits here too, exit to the beginning if '
+                                    'the spirit isn\'t here.')
     stop_requesting = False
     spirits = []
     while not stop_requesting:
@@ -168,11 +187,10 @@ def _create_new_cocktail():
 
 def _choose_neat_spirit() -> str:
     spirits_df = pd.read_pickle('AlcoholDataFrame.pkl')
-    enumerated_spirits = list(enumerate(spirits_df[~spirits_df['Type'].isin(BRANDLESS_DRINKS)].index))
-    print_message = 'The available spirits/liqueurs are: \n'
-    for el in enumerated_spirits:
-        print_message += str(el[0]) + '. ' + el[1] + '\n'
-    choice = _request_user_input(print_message,
+    enumerated_spirits = list(enumerate(spirits_df[~spirits_df['Type'].isin(NONALCOHOLIC_DRINKS)].index))
+    _print_message_from_enumeration(enumerated_spirits,
+                                    'The available spirits/liqueurs are: \n', post_message=None)
+    choice = _request_user_input('',
                                  [str(i) for i in range(len(enumerated_spirits))],
                                  'Try again.')
     return enumerated_spirits[int(choice)][1]
@@ -183,19 +201,17 @@ def _get_neat_drink_attributes(spirit: str, quantity_drunk: int) -> [float, floa
     strength = spirits_df.loc[spirit]['Strength (abv %)']
     price_per_litre = spirits_df.loc[spirit]['Price (/litre)']
     units = quantity_drunk * (strength / 100) / 10
-    return price_per_litre * quantity_drunk / 1000, strength, units
+    return round(price_per_litre * quantity_drunk / 1000,2), round(strength,2), round(units,1)
 
 
-def _choose_type():
+def _choose_type() -> str:
     spirits_df = pd.read_pickle('AlcoholDataFrame.pkl')
     available_types = list(enumerate(spirits_df['Type'].unique()))
-    print_message = 'What kind of spirit is it?\n'
-    for el in available_types:
-        print_message += str(el[0]) + '.' + el[1] + '\n'
-    print_message += str(len(available_types)) + '. It is not listed.'
-    choice = _request_user_input(print_message,
+    _print_message_from_enumeration(available_types,'What kind of spirit is it?\n',
+                                    str(len(available_types)) + '. It is not listed.')
+    choice = _request_user_input('',
                                  [str(i) for i in range(len(available_types)+1)],
-                                 ['Enter one of the available numbers.'])
+                                 'Enter one of the available numbers.')
     if choice != str(len(available_types)):
         return available_types[int(choice)][1]
     else:
@@ -208,7 +224,7 @@ def _add_new_spirit():
     strength = input('What is its strength in percentage form? E.g. 47.3')
     cost = input('How much does it cost per litre?')
     print_message = 'So you are adding a ' + type_of_drink + ' called ' + brand \
-                    + ' which is ' + strength + 'ABV(%) at £' + cost + '/litre. \n' \
+                    + ' which is ' + strength + '%(ABV) at £' + cost + '/litre. \n' \
                     + 'Is this correct? (Y/N)'
     correct = _request_user_input(print_message, ['Y', 'N'], 'Try again, must be Y/N.')
     if correct == 'Y':
@@ -218,6 +234,14 @@ def _add_new_spirit():
         print('Ok, trying again.')
         _add_new_spirit()
 
+
+def _get_available_cocktails() -> list:
+    cocktails_df = pd.read_pickle('CocktailsDataFrame.pkl')
+    return list(cocktails_df.index)
+
+def _get_available_spirits() -> list:
+    spirits_df = pd.read_pickle('AlcoholDataFrame.pkl')
+    return list(spirits_df[~spirits_df['Type'].isin(NONALCOHOLIC_DRINKS)].index)
 
 def _another_service() -> str:
     return _request_user_input('Another service? (Y/N)',
